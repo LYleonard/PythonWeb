@@ -6,8 +6,11 @@ __author__= 'LYleonard'
 '''
 Database operation module. This is independent with web module.
 '''
-import time, logging
+import logging
+
 import db
+
+
 class Field(object):
 
     _count = 0
@@ -274,7 +277,7 @@ class Model(dict):
         self.pre_delete and self.pre_delete()
         pk = self.__primary_key__.name
         args = (getattr(self, pk),)
-        db.update('delete from `%s` WHERE `%s`=?' % (self.__table__,pk), *args)
+        db.update('delete from `%s` WHERE `%s`=?' % (self.__table__, pk), *args)
         return self
 
     def insert(self):
@@ -282,7 +285,7 @@ class Model(dict):
         params = {}
         for k, v in self.__mappings__.iteritems():
             if v.insertable:
-                if not hasattr(self. k):
+                if not hasattr(self,k):
                     setattr(self, k, v.default)
                 params[v.name] = getattr(self, k)
         db.insert('%s' % self.__table__, **params)
@@ -290,7 +293,7 @@ class Model(dict):
 
 if __name__=='__main__':
     logging.basicConfig(level=logging.DEBUG)
-    db.create_engine('www-data', 'www-data', 'test')
+    db.create_engine('root', '243015', 'awesome')
     db.update('drop table if exits user')
     db.update('create table user (id int primary key, name text, email text, password text, last_modified real)')
     import doctest

@@ -4,15 +4,16 @@
 __author__ = 'LYleoanrd'
 '''Models for user, blog, comment.'''
 
-import time, uuid
+import time
 
 from transwarp.db import next_id
+
 from transwarp.orm import Model, StringField, BooleanField, FloatField, TextField
 
 class User(Model):
     __table__ = 'users'
 
-    id = StringField(primary_key = True, default=next_id, ddl='varchar(50)')
+    id = StringField(primary=True , default=next_id, ddl='varchar(50)')
     email = StringField(updatable=False, ddl='varchar(50)')
     password = StringField(ddl='varchar(50)')
     admin = BooleanField()
@@ -24,7 +25,7 @@ class User(Model):
 class Blog(Model):
     __table__ = 'blogs'
 
-    id = StringField(primary_key=True, default=next_id, ddl='varchar(50)')
+    id = StringField(primary=True, default=next_id, ddl='varchar(50)')
     user_id = StringField(updatable=False,ddl='varchar(50)')
     user_name = StringField(ddl='varchar(50)')
     user_image = StringField(ddl='varchar(500)')
@@ -37,7 +38,7 @@ class Blog(Model):
 class Comment(Model):
     __table__ = 'comments'
 
-    id = StringField(primary_key=True, default=next_id, ddl='varchar(50)')
+    id = StringField(primary=True, default=next_id, ddl='varchar(50)')
     blog_id = StringField(updatable=False, ddl='varcahr(50)')
     user_id = StringField(updatable=False, ddl='varchar(50)')
     user_name = StringField(ddl='varchar(50)')
