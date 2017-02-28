@@ -14,12 +14,14 @@ from transwarp.web import WSGIApplication, Jinja2TemplateEngine
 
 from config import configs
 
-#init db
+# init db:
 db.create_engine(**configs.db)
 
-# init wsgi app
+# init wsgi app:
 wsgi = WSGIApplication(os.path.dirname(os.path.abspath(__file__)))
-template_engine = Jinja2TemplateEngine(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'template'))
+
+template_engine = Jinja2TemplateEngine(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'))
+
 wsgi.template_engine = template_engine
 
 import urls
