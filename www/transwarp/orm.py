@@ -6,7 +6,7 @@ __author__= 'LYleonard'
 '''
 Database operation module. This is independent with web module.
 '''
-import logging
+import logging,time
 
 import db
 
@@ -18,7 +18,7 @@ class Field(object):
     def __init__(self, **kw):
         self.name = kw.get('name', None)
         self._default = kw.get('default', None)
-        self.primary_key = kw.get('primary', False)
+        self.primary_key = kw.get('primary_key', False)
         self.nullable = kw.get('nullable', False)
         self.updatable = kw.get('updatable', True)
         self.insertable = kw.get('insertable', True)
@@ -88,7 +88,7 @@ class BlobField(Field):
         super(BlobField, self).__init__(**kw)
 
 class VersionField(Field):
-    def __init__(self, name = None):
+    def __init__(self, name=None):
         super(VersionField, self).__init__(name=name, default=0, ddl='bigint')
 
 _triggers = frozenset(['pre_insert', 'pre_update', 'pre_delete'])
@@ -104,7 +104,7 @@ def _gen_sql(table_name, mappings):
         if f.primary_key:
             pk = f.name
         sql.append(nullable and ' `%s` %s,' % (f.name, ddl) or '`%s` %s not null,' % (f.name, ddl))
-    sql .append(' primary key(`%s`)' % pk)
+    sql.append(' primary key(`%s`)' % pk)
     sql.append(');')
     return '\n'.join(sql)
 
@@ -149,7 +149,7 @@ class ModelMetaclass(type):
         for k in mappings.iterkeys():
             attrs.pop(k)
         if not '__table__' in attrs:
-            attrs['__table'] = name.lower()
+            attrs['__table__'] = name.lower()
         attrs['__mappings__'] = mappings
         attrs['__primary_key__'] = primary_key
         attrs['__sql__'] = lambda self: _gen_sql(attrs['__table__'], mappings)
@@ -221,7 +221,7 @@ class Model(dict):
     @classmethod
     def get(cls, pk):
         '''get by primary key'''
-        d = db.select_one('select * from %s WHERE  %s=?' % (cls.__table__, cls.__primary_key__.name), pk)
+        d = db.select_one('select * from %s where  %s=?' % (cls.__table__, cls.__primary_key__.name), pk)
         return cls(**d) if d else None
 
     @classmethod
@@ -236,7 +236,7 @@ class Model(dict):
     @classmethod
     def find_all(cls, *args):
         '''find all and return list'''
-        L = db.select('select * from `%d`' % cls.__table__)
+        L = db.select('select * from `%s`' % cls.__table__)
         return [cls(**d) for d in L]
 
     @classmethod
@@ -259,7 +259,7 @@ class Model(dict):
         self.pre_update and self.pre_update()
         L = []
         args = []
-        for k, v in self.__mappings__iteritems():
+        for k, v in self.__mappings__.iteritems():
             if v.updatable:
                 if hasattr(self, k):
                     arg = getattr(self, k)
@@ -277,7 +277,7 @@ class Model(dict):
         self.pre_delete and self.pre_delete()
         pk = self.__primary_key__.name
         args = (getattr(self, pk),)
-        db.update('delete from `%s` WHERE `%s`=?' % (self.__table__, pk), *args)
+        db.update('delete from `%s` where `%s`=?' % (self.__table__, pk), *args)
         return self
 
     def insert(self):

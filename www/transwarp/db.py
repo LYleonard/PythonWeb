@@ -263,22 +263,22 @@ def transaction():
     with transaction():
         pass
 
-    >>> def update_profile(id, name, rollback):
+    >>>  def update_profile(id, name, rollback):
     ...     u = dict(id=id, name=name, email='%s@test.org' % name, passwd=name, last_modified=time.time())
     ...     insert('user', **u)
     ...     r = update('update user set passwd=? where id=?', name.upper(), id)
     ...     if rollback:
     ...         raise StandardError('will cause rollback...')
-    >>> with transaction():
+    >>>  with transaction():
     ...     update_profile(900301, 'Python', False)
-    >>> select_one('select * from user where id=?', 900301).name
+    >>>  select_one('select * from user where id=?', 900301).name
     u'Python'
-    >>> with transaction():
+    >>>  with transaction():
     ...     update_profile(900302, 'Ruby', True)
     Traceback (most recent call last):
       ...
     StandardError: will cause rollback...
-    >>> select('select * from user where id=?', 900302)
+    >>>  select('select * from user where id=?', 900302)
     []
     '''
     return _TransactionCtx()
@@ -287,21 +287,21 @@ def with_transaction(func):
     '''
     A decorator that makes function around transaction.
 
-    >>> @with_transaction
+    >>>  @with_transaction
     ... def update_profile(id, name, rollback):
     ...     u = dict(id=id, name=name, email='%s@test.org' % name, passwd=name, last_modified=time.time())
     ...     insert('user', **u)
     ...     r = update('update user set passwd=? where id=?', name.upper(), id)
     ...     if rollback:
     ...         raise StandardError('will cause rollback...')
-    >>> update_profile(8080, 'Julia', False)
-    >>> select_one('select * from user where id=?', 8080).passwd
+    >>>  update_profile(8080, 'Julia', False)
+    >>>  select_one('select * from user where id=?', 8080).passwd
     u'JULIA'
-    >>> update_profile(9090, 'Robert', True)
+    >>>  update_profile(9090, 'Robert', True)
     Traceback (most recent call last):
       ...
     StandardError: will cause rollback...
-    >>> select('select * from user where id=?', 9090)
+    >>>  select('select * from user where id=?', 9090)
     []
     '''
     @functools.wraps(func)
@@ -340,7 +340,7 @@ def select_one(sql, *args):
     If no result found, return None.
     If multiple results found, the first one returned.
 
-    >>> u1 = dict(id=100, name='Alice', email='alice@test.org', passwd='ABC-12345', last_modified=time.time())
+    >>>  u1 = dict(id=100, name='Alice', email='alice@test.org', passwd='ABC-12345', last_modified=time.time())
     >>> u2 = dict(id=101, name='Sarah', email='sarah@test.org', passwd='ABC-12345', last_modified=time.time())
     >>> insert('user', **u1)
     1
@@ -453,7 +453,7 @@ def update(sql, *args):
     r'''
     Execute update SQL.
 
-    >>> u1 = dict(id=1000, name='Michael', email='michael@test.org', passwd='123456', last_modified=time.time())
+    >>> u1 = dict(id=1000, name='Test', email='test@example.com', passwd='1234567890', last_modified=time.time())
     >>> insert('user', **u1)
     1
     >>> u2 = select_one('select * from user where id=?', 1000)

@@ -10,4 +10,4 @@ from models import User,Blog, Comment
 @get('/')
 def test_users():
     users = User.find_all()
-    return dict(users = users)
+    return dict(users=users)

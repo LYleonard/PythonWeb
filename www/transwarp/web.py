@@ -12,14 +12,14 @@ except ImportError:
     from StringIO import StringIO
 
 # thread local object for storing request and response:
-ctx = threading.local
+ctx = threading.local()
 
 # Dict object:
 class Dict(dict):
     '''Simple dict but support access as x.y style'''
     def __init__(self, names=(), values=(), **kw):
         super(Dict, self).__init__(**kw)
-        for k,v in zip(names, values) :
+        for k,v in zip(names, values):
             self[k] = v
 
     def __getattr__(self, key):
@@ -45,7 +45,7 @@ class UTC(datetime.tzinfo):
             h = int(mt.group(2))
             m = int(mt.group(3))
             if minus:
-                h, m = (-h),(-m)
+                h, m = (-h), (-m)
             self._utcoffset = datetime.timedelta(hours=h, minutes=m)
             self._tzname = 'UTC%s' % utc
         else:
@@ -79,7 +79,7 @@ _RESPONSE_STATUSES = {
     203: 'Non-Authoritative Information',
     204: 'No Content',
     205: 'Reset Content',
-    206: 'Partical Content',
+    206: 'Partial Content',
     207: 'Multi Status',
     226: 'IM Used',
 
@@ -95,12 +95,12 @@ _RESPONSE_STATUSES = {
     # Client Error
     400: 'Bad Request',
     401: 'Unauthorized',
-    402: 'Payment Requested',
+    402: 'Payment Required',
     403: 'Forbidden',
     404: 'Not Found',
     405: 'Method Not Allowed',
     406: 'Not Acceptable',
-    407: 'Proxy Authentication Requested',
+    407: 'Proxy Authentication Required',
     408: 'Request Timeout',
     409: 'Conflict',
     410: 'Gone',
@@ -108,8 +108,8 @@ _RESPONSE_STATUSES = {
     412: 'Precondition Failed',
     413: 'Request Entity Too Large',
     414: 'Request URI Too Long',
-    415: 'Unsupport Media Type',
-    416: 'Requested rabge Not Satisfiable',
+    415: 'Unsupported Media Type',
+    416: 'Requested range Not Satisfiable',
     417: 'Expectation Failed',
     418: "I'm a teapot",
     422: 'Unprocessable Entity',
@@ -119,15 +119,15 @@ _RESPONSE_STATUSES = {
     # Server Error
     500: 'Internal Server Error',
     501: 'Not Implemented',
-    502: 'Bad Geteway',
-    503: 'service Unavailable',
+    502: 'Bad Gateway',
+    503: 'Service Unavailable',
     504: 'Gateway Timeout',
     505: 'HTTP Version Not Supported',
     507: 'Insufficient Storage',
     510: 'Not Extended',
 }
 
-_RESPONSE_STATUSES = re.compile(r'^\d\d\d(\ [\w\ ]+)?$')
+_RE_RESPONSE_STATUS = re.compile(r'^\d\d\d(\ [\w\ ]+)?$')
 
 _RESPONSE_HEADERS = (
     'Accept-Ranges',
@@ -184,7 +184,7 @@ class HttpError(Exception):
     def __init__(self, code):
         ''' Init an HttpError with response code'''
         super(HttpError, self).__init__()
-        self.status = '%d %s' % (code, _RESPONSE_STATUSES(code))
+        self.status = '%d %s' % (code, _RESPONSE_STATUSES[code])
 
     def header(self, name, value):
         if not hasattr(self, '_headers'):
@@ -228,7 +228,7 @@ def badrequest():
       ...
     HttpError: 400 Bad Request
     '''
-    return  HttpError(400)
+    return HttpError(400)
 
 def unauthorized():
     '''send an unauthorized response'''
@@ -280,7 +280,7 @@ def _quote(s, encoding='utf-8'):
         s = s.encode(encoding)
     return urllib.quote(s)
 
-def _unquote(s,encoding='utf-8'):
+def _unquote(s, encoding='utf-8'):
     '''url unquote as unicode'''
     return urllib.unquote(s).decode(encoding)
 
@@ -355,7 +355,7 @@ def _build_regex(path):
         else:
             s = ''
             for ch in v:
-                if ch>='0' and ch <='9':
+                if ch>='0' and ch<='9':
                     s = s + ch
                 elif ch>='A' and ch<='Z':
                     s = s + ch
@@ -382,7 +382,7 @@ class Route(object):
     def match(self, url):
         m = self.route.match(url)
         if m:
-            m.groups()
+            return m.groups()
         return None
 
     def __call__(self, *args):
@@ -392,6 +392,7 @@ class Route(object):
         if self.is_static:
             return 'Route(static,%s,path=%s)' % (self.method, self.path)
         return 'Route(dynamic,%s,path=%s)' % (self.method, self.path)
+    __repr__ = __str__
 
 def _static_file_generator(fpath):
     BLOCK_SIZE = 8192
@@ -407,13 +408,13 @@ class StaticFileRoute(object):
         self.is_static = False
         self.route = re.compile('^/static/(.+)$')
 
-    def match(self,url):
+    def match(self, url):
         if url.startswith('/static/'):
             return (url[1:], )
         return None
 
     def __call__(self, *args):
-        fpath = os.path.join(ctx.application.document_root,args[0])
+        fpath = os.path.join(ctx.application.document_root, args[0])
         if not os.path.isfile(fpath):
             raise notfound()
         fext = os.path.splitext(fpath)[1]
@@ -712,7 +713,7 @@ class Request(object):
         u'http://www.example.com/'
         :return:
         '''
-        return Dict(**self._get_cookie())
+        return Dict(**self._get_cookies())
 
     def cookie(self, name, default=None):
         '''
@@ -767,7 +768,7 @@ class Response(object):
         'text/html; charset=utf-8'
         >>> r.header('X-Powered-By')
         '''
-        key =  name.upper()
+        key = name.upper()
         if not key in _RESPONSE_HEADER_DICT:
             key = name
         return self._headers.get(key)
@@ -845,7 +846,7 @@ class Response(object):
         '''
         return self.header('CONTENT-LENGTH')
 
-    @content_type.setter
+    @content_length.setter
     def content_length(self, value):
         '''
         Set content length, the value can be int or str.
@@ -859,7 +860,7 @@ class Response(object):
         :param value:
         :return:
         '''
-        self.set_header('CONTENT-TYPE')
+        self.set_header('CONTENT-LENGTH', str(value))
 
     def delete_cookie(self, name):
         '''
@@ -868,7 +869,7 @@ class Response(object):
         :return:
         '''
         self.set_cookie(name, '__deleted__', expires=0)
-    def set_cookie(self, name, value, max_age=None, expires=None, path='/',domain=None,secure=False, http_only=True):
+    def set_cookie(self, name, value, max_age=None, expires=None, path='/', domain=None, secure=False, http_only=True):
         '''
         Set a cookie.
         Args:
@@ -899,12 +900,12 @@ class Response(object):
         L = ['%s=%s' % (_quote(name), _quote(value))]
         if expires is not None:
             if isinstance(expires, (float, int, long)):
-                L.append('Expires=%s' % datetime.datetime.fromtimestamp(expires, UTC_0).strftime('%a, %d-%b-%Y %H:&M:%S GMT'))
+                L.append('Expires=%s' % datetime.datetime.fromtimestamp(expires, UTC_0).strftime('%a, %d-%b-%Y %H:%M:%S GMT'))
             if isinstance(expires, (datetime.date, datetime.datetime)):
                 L.append('Expires=%s' % expires.astimezone(UTC_0).strftime('%a, %d-%d-%b-%Y %H:%M:%S GMT'))
         elif isinstance(max_age,(int, long)):
             L.append('Max-Age=%d' % max_age)
-        L.append('Path=%s' % domain)
+        L.append('Path=%s' % path)
         if domain:
             L.append('Domain=%s' % domain)
         if secure:
@@ -1003,7 +1004,7 @@ class Response(object):
         elif isinstance(value, basestring):
             if isinstance(value, unicode):
                 value = value.encode('utf-8')
-            if _RESPONSE_STATUSES.match(value):
+            if _RE_RESPONSE_STATUS.match(value):
                 self._status = value
             else:
                 raise ValueError('Bad response code: %s' % value)
@@ -1080,7 +1081,7 @@ def interceptor(pattern='/'):
         pass
     '''
     def _decorator(func):
-        func.__interceptor__ = _build_pattern_fn()
+        func.__interceptor__ = _build_pattern_fn(pattern)
         return func
     return _decorator
 
@@ -1122,7 +1123,7 @@ def _load_module(module_name):
     m = __import__(from_module, globals(), locals(),[import_module])
     return getattr(m, import_module)
 
-class  WSGIApplication(object):
+class WSGIApplication(object):
     def __init__(self, document_root=None, **kw):
         '''
         Init a WSGIApplication.
@@ -1183,7 +1184,7 @@ class  WSGIApplication(object):
 
     def run(self, port=9000, host='127.0.0.1'):
         from wsgiref.simple_server import make_server
-        logging.info('application (%s) will start at %s:%s...' % (self._document_root, host, post))
+        logging.info('application (%s) will start at %s:%s...' % (self._document_root, host, port))
         server = make_server(host, port, self.get_wsgi_application(debug=True))
         server.serve_forever()
 
@@ -1198,7 +1199,7 @@ class  WSGIApplication(object):
         def fn_route():
             request_method = ctx.request.request_method
             path_info = ctx.request.path_info
-            if request_method=='GET':
+            if request_method == 'GET':
                 fn = self._get_static.get(path_info, None)
                 if fn:
                     return fn()
@@ -1232,7 +1233,7 @@ class  WSGIApplication(object):
                     r = r.encode('utf-8')
                 if r is None:
                     r = []
-                start_response(response.statue, response.headers)
+                start_response(response.status, response.headers)
                 return r
             except RedirectError, e:
                 response.set_header('Location', e.location)

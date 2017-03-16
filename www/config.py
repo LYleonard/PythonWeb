@@ -17,6 +17,7 @@ class Dict(dict):
             self[k] = v
 
     def __getattr__(self, key):
+
         try:
             return self[key]
         except KeyError:
@@ -42,7 +43,7 @@ def toDict(d):
     D = Dict()
     for k,v in d.iteritems():
         D[k] = toDict(v) if isinstance(v, dict) else v
-        return D
+    return D
 
 configs = config_default.configs
 
