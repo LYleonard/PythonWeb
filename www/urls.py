@@ -54,13 +54,13 @@ def user_interceptor(next):
     logging.info('try to bind user from session cookie...')
     user = None
     cookie = ctx.request.cookies.get(_COOKIE_NAME)
-    if(cookie):
+    if cookie:
         logging.info('parse session cookie...')
         user = parse_signed_cookie(cookie)
         if user:
             logging.info('Bind user <%s> to session...' % user.email)
     ctx.request.user = user
-    return next
+    return next()
 
 @interceptor('/manage/')
 def manage_interceptor(next):
@@ -123,15 +123,15 @@ def register_user():
     user = User.find_first('where email=?', email)
     if user:
         raise APIError('register:failed', 'email', 'Email is already in use.')
-    user = User(name=name, email=email, password=password, image='http://www.gravatar.com/avatar' % hashlib.md5(email).hexdigest())
+    user = User(name=name, email=email, password=password, image='http://www.gravatar.com/avatar/%s?d=mm&s=120' % hashlib.md5(email).hexdigest())
     user.insert()
     #make session cookie
     cookie = make_signed_cookie(user.id, user.password, None)
     ctx.response.set_cookie(_COOKIE_NAME, cookie)
     return user
 
-@view
-@get('register.html')
+@view('register.html')
+@get('/register')
 def register():
     return dict()
 
