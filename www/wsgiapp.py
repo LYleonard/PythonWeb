@@ -24,7 +24,7 @@ def datetime_filter(t):
     if delta < 7200:
         return u'one hour ago'
     if delta < 86400:
-        return u'%s hours ago' % (delta //3600)
+        return u'%s hours ago' % (delta // 3600)
     if delta < 604800:
         return u'%s days ago' % (delta // 86400)
     dt = datetime.fromtimestamp(t)
