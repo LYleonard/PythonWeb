@@ -2,11 +2,11 @@
 #_*_ coding: utf-8 _*_
 __author__ = 'LYleonard'
 
-import os, re, time, base64, hashlib, logging
+import os, re, time, base64, hashlib, logging, markdown2
 
 from transwarp.web import get, view, post, ctx, interceptor, seeother, notfound
 
-from apis import api, APIError, APIValueError, APIPermissionError, APIResourceNotFoundError
+from apis import api,Page, APIError, APIValueError, APIPermissionError, APIResourceNotFoundError
 
 from models import User,Blog, Comment
 from config import configs
@@ -159,6 +159,34 @@ def api_create_blog():
     blog.insert()
     return blog
 
+def _get_page_index():
+    page_index = 1
+    try:
+        page_index = int(ctx.request.get('page', '1'))
+    except ValueError:
+        pass
+    return page_index
+
+def _get_blogs_by_page():
+    total = Blog.count_all()
+    page = Page(total, _get_page_index())
+    blogs = Blog.find_by('order by created_at desc limit ?,?', page.offset, page.limit)
+    return blogs, page
+
+@api
+@get('/api/blogs')
+def api_get_blogs():
+    format = ctx.request.get('format', '')
+    blogs, page = _get_blogs_by_page()
+    if format == 'html':
+        for blog in blogs:
+            blog.content = markdown2.markdown(blog.content)
+    return dict(blogs=blogs, page=page)
+
+@view('manage_blog_list.html')
+@get('/manage/blogs')
+def manage_blogs():
+    return dict(page_index=_get_page_index(), user=ctx.request.user)
 
 @api
 @get('/api/users')
