@@ -72,8 +72,23 @@ def manage_interceptor(next):
 @view('blogs.html')
 @get('/')
 def index():
-    blogs = Blog.find_all()
-    return dict(blogs=blogs, user=ctx.request.user)
+    blogs, page = _get_blogs_by_page()
+    for blog in blogs:
+        blog.created_at = time.strftime('%Y-%m-%d %H:%M:%S %W', time.localtime(blog.created_at))
+    return dict(page=page, blogs=blogs, user=ctx.request.user)
+
+@view('blog.html')
+@get('/blog/:blog_id')
+def blog(blog_id):
+    blog = Blog.get(blog_id)
+    if blog is None:
+        raise notfound()
+    blog.html_content = markdown2.markdown(blog.content)
+    blog.created_at = time.strftime('%Y-%m-%d %H:%M:%S %W', time.localtime(blog.created_at))
+    comments = Comment.find_by('where blog_id=? order by created_at desc limit 1000', blog_id)
+    for comment in comments:
+        comment.created_at = time.strftime('%Y-%m-%d %H:%M:%S %W', time.localtime(comment.created_at))
+    return dict(blog=blog, comments=comments, user=ctx.request.user)
 
 @view('signin.html')
 @get('/signin')
@@ -141,6 +156,14 @@ def manage_blogs_create():
     return dict(id=None, action='/api/blogs', redirect='/manage/blogs', user=ctx.request.user)
 
 @api
+@get('/api/blogs/:blog_id')
+def api_get_blog(blog_id):
+    blog = Blog.get(blog_id)
+    if blog:
+        return blog
+    raise APIResourceNotFoundError('Blog')
+
+@api
 @post('/api/blogs')
 def api_create_blog():
     check_admin()
@@ -158,6 +181,73 @@ def api_create_blog():
     blog = Blog(user_id=user.id, user_name=user.name, name=name, summary=summary, content=content)
     blog.insert()
     return blog
+
+@api
+@post('/api/blogs/:blog_id')
+def api_update_blog(blog_id):
+    check_admin()
+    i = ctx.request.input(name='', summary='', content='')
+    name = i.name.strip()
+    summary = i.summary.strip()
+    content = i.content.strip()
+    if not name:
+        raise APIValueError('name', 'name connot be empty.')
+    if not summary:
+        raise APIValueError('summary', 'summary cannot be empty.')
+    if not content:
+        raise APIValueError('content', 'connent connot be empty.')
+    blog = Blog.get(blog_id)
+    if blog is None:
+        raise APIResourceNotFoundError('Blog')
+    blog.name = name
+    blog.summary = summary
+    blog.content = content
+    blog.update()
+    return blog
+
+@api
+@post('/api/blogs/:blog_id/delete')
+def api_delete_blog(blog_id):
+    check_admin()
+    blog = Blog.get(blog_id)
+    if blog is None:
+        raise APIResourceNotFoundError('Blog')
+    blog.delete()
+    return dict(id=blog_id)
+
+@api
+@post('/api/blogs/:blog_id/comments')
+def api_create_blog_comment(blog_id):
+    user = ctx.request.user
+    if user is None:
+        raise APIPermissionError('Need signin.')
+    blog = Blog.get(blog_id)
+    if blog is None:
+        raise APIResourceNotFoundError('Blog')
+    content = ctx.request.input(content='').content.strip()
+    if content is None:
+        raise APIValueError('content')
+    c = Comment(blog_id=blog_id, user_id=user.id, user_name=user.name, user_image=user.image, content=content)
+    c.insert()
+    return dict(conten=c)
+
+@api
+@post('/api/comments/:comment_id/delete')
+def api_delete_commnet(comment_id):
+    check_admin()
+    comment = Comment.get(comment_id)
+    if comment is None:
+        raise APIResourceNotFoundError('Comment')
+    comment.delete()
+    return dict(id=comment_id)
+
+@api
+@get('/api/comments')
+def api_get_comments():
+    total = Comment.count_all()
+    page = Page(total, _get_page_index())
+    comments = Comment.find_by('order by created_at desc limit ?,?', page.offset, page.limit)
+    return dict(comments=comments, page=page)
 
 def _get_page_index():
     page_index = 1
@@ -191,8 +281,31 @@ def manage_blogs():
 @api
 @get('/api/users')
 def api_get_users():
-    users = User.find_by('order by created_at desc')
+    total = User.count_all()
+    page = Page(total, _get_page_index())
+    users = User.find_by('order by created_at desc limit ?,?', page.offset, page.limit)
     for u in users:
         u.password = '******'
-    return dict(users=users)
+    return dict(users=users, page=page)
 
+@get('/manage/')
+def manage_index():
+    raise seeother('/manage/blogs')
+
+@view('manage_comment_list.html')
+@get('/manage/comments')
+def manage_comments():
+    return dict(page_index=_get_page_index(), user=ctx.request.user)
+
+@view('manage_blog_edit.html')
+@get('/manage/blogs/edit/:blog_id')
+def manage_blogs_edit(blog_id):
+    blog = Blog.get(blog_id)
+    if blog is None:
+        raise notfound()
+    return dict(id=blog_id, name=blog.name, summary=blog.summary, content=blog.content, action='/api/blogs/%s' % blog_id, redirect='/manage/blogs', user=ctx.request.user)
+
+@view('manage_user_list.html')
+@get('/manage/users')
+def manage_users():
+    return dict(page_index=_get_page_index(), user=ctx.request.user)
